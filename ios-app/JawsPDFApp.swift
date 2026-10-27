@@ -485,6 +485,7 @@ struct JawsBrandHeaderView: View {
                         .font(.system(size: 8.5, weight: .semibold, design: .serif))
                         .foregroundColor(JawsTheme.orange)
                         .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
 
                 Text("PDF")
