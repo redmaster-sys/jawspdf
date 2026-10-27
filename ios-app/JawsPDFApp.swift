@@ -7,7 +7,7 @@ import UIKit
 
 // MARK: - JawsPDF iOS / iPadOS Uygulama Giriş Noktası
 // Tema: Claude Krem (#FAF9F5), Claude Kiremit Turuncusu (#D06F59), Claude Editorial Serif
-// Geliştirici İmzası: @mrt.DEV (Köpekbalığı logosunun altında)
+// Geliştirici Etiketi: FREE (Köpekbalığı logosunun altında)
 // Bundle ID: com.jawspdf.studio
 
 @main
@@ -321,7 +321,7 @@ final class JawsDocumentStore: ObservableObject {
                     ]
                 )
 
-                let footer = "JawsPDF  •  @mrt.DEV  •  Sayfa \(pageIndex)"
+                let footer = "JawsPDF  •  FREE  •  Sayfa \(pageIndex)"
                 footer.draw(
                     in: CGRect(x: 42, y: 780, width: pageRect.width - 84, height: 24),
                     withAttributes: [
@@ -551,8 +551,9 @@ struct JawsBrandHeaderView: View {
                         Text("🦈")
                             .font(.system(size: 25))
                     }
-                    Text("@mrt.DEV")
-                        .font(.system(size: 10, weight: .bold, design: .serif))
+                    Text("FREE")
+                        .font(.system(size: 10.5, weight: .bold, design: .serif))
+                        .tracking(1.2)
                         .foregroundColor(JawsTheme.orange)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
