@@ -465,43 +465,47 @@ struct JawsBrandHeaderView: View {
     var subtitle: String
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: 6) {
                 Text("Jaws")
-                    .font(.system(size: 26, weight: .bold, design: .serif))
+                    .font(.system(size: 24, weight: .bold, design: .serif))
                     .foregroundColor(JawsTheme.charcoal)
+                    .fixedSize(horizontal: true, vertical: false)
 
-                VStack(spacing: 2) {
+                VStack(spacing: 1) {
                     if let uiImg = UIImage(named: "jaws-shark") {
                         Image(uiImage: uiImg)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 58, height: 34)
+                            .frame(width: 54, height: 30)
                     } else {
                         Text("🦈")
-                            .font(.system(size: 26))
+                            .font(.system(size: 24))
                     }
                     Text("Created by TaylanMERT")
-                        .font(.system(size: 8.5, weight: .semibold, design: .serif))
+                        .font(.system(size: 7.5, weight: .semibold, design: .serif))
                         .foregroundColor(JawsTheme.orange)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                 }
 
                 Text("PDF")
-                    .font(.system(size: 16, weight: .bold, design: .serif))
+                    .font(.system(size: 15, weight: .bold, design: .serif))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 9)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(JawsTheme.orange)
                     .cornerRadius(7)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            .fixedSize(horizontal: true, vertical: false)
 
-            Spacer()
+            Spacer(minLength: 6)
 
             Text(subtitle)
-                .font(.system(size: 11.5, weight: .medium, design: .serif))
+                .font(.system(size: 11, weight: .medium, design: .serif))
                 .foregroundColor(JawsTheme.muted)
+                .lineLimit(2)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, 16)
