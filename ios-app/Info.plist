@@ -4,6 +4,11 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>tr</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>tr</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>JawsPDF</string>
 	<key>CFBundleExecutable</key>
@@ -19,15 +24,15 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>JawsPDF, fiziksel belgelerinizi, sözleşmelerinizi ve notlarınızı yüksek netlikte PDF olarak taramak için kameranızı kullanır.</string>
+	<string>JawsPDF, fiziksel belgelerinizi yüksek netlikte PDF olarak taramak için kameranızı kullanır. / JawsPDF uses your camera to scan documents into high-clarity PDFs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>JawsPDF, galerinizdeki görselleri PDF belgesine dönüştürmek için fotoğraf arşivinize erişir.</string>
+	<string>JawsPDF, galerinizdeki görselleri PDF belgesine dönüştürmek için fotoğraf arşivinize erişir. / JawsPDF accesses your photo library to convert images into PDF documents.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>JawsPDF, dışa aktarılan PDF sayfa görsellerini fotoğraf arşivinize kaydetmek için izin ister.</string>
+	<string>JawsPDF, dışa aktarılan PDF sayfa görsellerini fotoğraf arşivinize kaydetmek için izin ister. / JawsPDF saves exported PDF page images to your photo library.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
