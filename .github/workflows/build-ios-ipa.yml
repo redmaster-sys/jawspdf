@@ -1,0 +1,78 @@
+name: JawsPDF iOS IPA Derleyici ve Canlı Simülatör Testi
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test-ios:
+    name: Xcode ile JawsPDF.ipa Üret & iOS Simülatörde Test Et
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios-app
+    steps:
+      - name: Repo Kodlarını Çek
+        uses: actions/checkout@v4
+
+      - name: WebBundle Kaynaklarını Hazırla
+        run: |
+          mkdir -p WebBundle/assets
+          cp ../index.html WebBundle/index.html
+          cp ../style.css WebBundle/style.css
+          cp ../app.js WebBundle/app.js
+          cp -R ../assets/* WebBundle/assets/
+
+      - name: XcodeGen ile JawsPDF.xcodeproj Oluştur
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: 1) Gerçek iOS Cihazlar İçin JawsPDF.ipa Derle (ARM64 Release)
+        run: |
+          xcodebuild clean archive \
+            -project JawsPDF.xcodeproj \
+            -scheme JawsPDF \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $RUNNER_TEMP/JawsPDF.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          mkdir -p $RUNNER_TEMP/Payload
+          cp -R $RUNNER_TEMP/JawsPDF.xcarchive/Products/Applications/JawsPDF.app $RUNNER_TEMP/Payload/
+          cd $RUNNER_TEMP
+          zip -r9 JawsPDF-v1.0.0.ipa Payload
+
+      - name: 2) iOS Simülatör İçin Derle ve Canlı Ekran Görüntüsü Al
+        run: |
+          xcodebuild build \
+            -project JawsPDF.xcodeproj \
+            -scheme JawsPDF \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath $RUNNER_TEMP/SimBuild \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          SIM_UDID=$(xcrun simctl list devices available | grep -E "iPhone 16 Pro |iPhone 15 Pro " | head -n 1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          if [ -n "$SIM_UDID" ]; then
+            xcrun simctl boot "$SIM_UDID" || true
+            xcrun simctl bootstatus "$SIM_UDID" -b
+            APP_PATH=$(find $RUNNER_TEMP/SimBuild -name "JawsPDF.app" | head -n 1)
+            xcrun simctl install "$SIM_UDID" "$APP_PATH"
+            xcrun simctl launch "$SIM_UDID" com.jawspdf.studio
+            sleep 5
+            xcrun simctl io "$SIM_UDID" screenshot "$RUNNER_TEMP/JawsPDF_iOS_Simulator_Canli_Gorunum.png"
+          fi
+
+      - name: JawsPDF.ipa ve Canlı iOS Ekran Görüntüsünü Yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: JawsPDF-iOS-IPA-ve-Simulator-Testi
+          path: |
+            ${{ runner.temp }}/JawsPDF-v1.0.0.ipa
+            ${{ runner.temp }}/JawsPDF_iOS_Simulator_Canli_Gorunum.png

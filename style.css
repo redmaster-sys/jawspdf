@@ -1,0 +1,1049 @@
+/* JawsPDF — Claude Warm Cream (#FAF9F5) & Terracotta Orange (#D06F59) Editorial Theme */
+:root {
+  /* Claude Web & App Arka Plan Renkleri (media_1792352104687_94376f89.png ile birebir) */
+  --bg-page: #FAF9F5;
+  --bg-surface: #FBF9F5;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F2EFE6;
+  --text-main: #141413;
+  --text-secondary: #5E5D57;
+  --text-muted: #78766F;
+  --border-light: #E6E4DC;
+  --border-hover: #D2CFC3;
+
+  /* Claude Turuncusu (Kırmızı yerine kullanılan ana vurgu rengi) */
+  --claude-orange: #D06F59;
+  --claude-orange-hover: #B95B46;
+  --claude-orange-soft: #F6E6E1;
+  --claude-dark: #141413;
+
+  /* Geriye dönük değişken eşlemeleri */
+  --brand-red: #D06F59;
+  --brand-red-hover: #B95B46;
+  --brand-ocean: #D06F59;
+
+  /* Kategori Renkleri (Claude Turuncusu ve Sıcak Tonlarla Uyumlu) */
+  --cat-organize: #D06F59;   /* PDF DÜZENLE - Claude Turuncusu */
+  --cat-optimize: #5C9E31;   /* PDF'İ İYİLEŞTİR - Sıcak Yeşil */
+  --cat-jpg: #D99B26;        /* JPG <-> PDF - Kehribar Sarı */
+  --cat-word: #3B6998;       /* Word <-> PDF - Klasik Mavi */
+  --cat-ppt: #D06F59;        /* PowerPoint <-> PDF - Claude Turuncusu */
+  --cat-excel: #468952;      /* Excel <-> PDF - Yaprak Yeşili */
+  --cat-edit: #8E5B9E;       /* PDF'İ DÜZENLE - Mürdüm */
+  --cat-security: #4A6F8A;   /* PDF GÜVENLİĞİ - Arduvaz Mavi */
+  --cat-ai: #B85D47;         /* PDF INTELLIGENCE - Koyu Claude Turuncusu */
+
+  /* Claude Editorial Serif Font Ailesi */
+  --font-claude: 'Source Serif 4', 'Newsreader', Georgia, Cambria, 'Times New Roman', Times, serif;
+
+  --shadow-sm: 0 2px 8px rgba(20, 20, 19, 0.04);
+  --shadow-md: 0 10px 28px rgba(20, 20, 19, 0.07);
+  --shadow-lg: 0 20px 46px rgba(20, 20, 19, 0.11);
+  --radius-md: 14px;
+  --radius-lg: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-claude);
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ÜST NAVİGASYON ÇUBUĞU (Claude Üst Bar Estetiği) */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-light);
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 28px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.brand-jaws {
+  font-family: var(--font-claude);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.9px;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.brand-shark-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.brand-shark-img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  background: transparent;
+  transition: transform 0.25s ease;
+}
+
+.brand-creator-tag {
+  font-family: var(--font-claude);
+  font-size: 10.5px;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.15px;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.brand-creator-tag b {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--claude-orange);
+}
+
+.brand-logo:hover .brand-shark-img {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.brand-pdf {
+  font-family: var(--font-claude);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.9px;
+  color: var(--claude-orange);
+  line-height: 1;
+}
+
+.top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  font-family: var(--font-claude);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  color: var(--text-main);
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+  background: var(--claude-orange-soft);
+  color: var(--claude-orange);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mode-switch-pill {
+  display: inline-flex;
+  background: var(--bg-subtle);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+}
+
+.mode-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-claude);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-tab.active {
+  background: var(--claude-dark);
+  color: #FAF9F5;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-folder-top {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  font-family: var(--font-claude);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+
+.btn-folder-top:hover {
+  background: var(--claude-orange-soft);
+  border-color: var(--claude-orange);
+  color: var(--claude-orange);
+}
+
+/* MEGA MENÜ & DÖNÜŞTÜR AÇILIR PANELİ */
+.mega-dropdown {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1340px, 96vw);
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: 0 0 20px 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 24px 26px;
+  z-index: 95;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 18px;
+}
+
+.convert-dropdown {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-20%);
+  width: min(560px, 92vw);
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: 0 0 20px 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 22px 26px;
+  z-index: 95;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.mega-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.mega-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: all 0.15s ease;
+}
+
+.mega-item:hover {
+  background: var(--claude-orange-soft);
+  color: var(--claude-orange);
+  transform: translateX(2px);
+}
+
+.mega-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* HERO BÖLÜMÜ (Claude "Think fast, build faster" Editorial Başlık Stili) */
+.hero-banner {
+  background: var(--bg-page);
+  padding: 40px 24px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hero-title {
+  font-family: var(--font-claude);
+  font-size: 42px;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -1.1px;
+  line-height: 1.15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-subtitle {
+  margin-top: 10px;
+  font-family: var(--font-claude);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* KATEGORİ FİLTRE ÇUBUĞU */
+.category-pills-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.cat-pill {
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.cat-pill:hover {
+  border-color: var(--claude-orange);
+  color: var(--claude-orange);
+  background: var(--claude-orange-soft);
+}
+
+.cat-pill.active {
+  background: var(--claude-orange);
+  color: #ffffff;
+  border-color: var(--claude-orange);
+}
+
+/* ANA KONTEYNER VE 30 ARAÇ KART IZGARASI */
+.main-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+  background: var(--bg-page);
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 16px;
+}
+
+.tool-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.tool-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--claude-orange);
+  background: #FFFDFB;
+}
+
+.tool-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tool-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 4px 10px rgba(208, 111, 89, 0.18);
+}
+
+.tool-cat-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.tool-card h3 {
+  font-family: var(--font-claude);
+  font-size: 17.5px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+}
+
+.tool-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.48;
+}
+
+/* 7 SÜTUNLU MATRİS ÖZET PANELİ */
+.matrix-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.matrix-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.matrix-grid-7 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1150px) {
+  .matrix-grid-7,
+  .mega-dropdown {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ARAÇ ÇALIŞMA EKRANI (Claude Krem Arka Plan + Claude Turuncu Butonlar) */
+.workspace-view {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  min-height: 540px;
+}
+
+@media (max-width: 960px) {
+  .workspace-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ws-main {
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-page);
+  position: relative;
+}
+
+.ws-back-btn {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ws-back-btn:hover {
+  background: var(--claude-orange-soft);
+  border-color: var(--claude-orange);
+  color: var(--claude-orange);
+}
+
+.ws-tool-header {
+  text-align: center;
+  max-width: 640px;
+  margin-bottom: 24px;
+}
+
+.ws-tool-header h2 {
+  font-family: var(--font-claude);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  color: var(--text-main);
+  margin-top: 10px;
+}
+
+.ws-tool-header p {
+  font-size: 15.5px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.dropzone-box {
+  width: 100%;
+  max-width: 620px;
+  border: 2px dashed #C7C3B5;
+  border-radius: 18px;
+  background: var(--bg-card);
+  padding: 34px 24px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.dropzone-box.dragover {
+  border-color: var(--claude-orange);
+  background: var(--claude-orange-soft);
+}
+
+/* Claude "Download now" Turuncu Buton Stili (#D06F59) */
+.btn-select-files {
+  background: var(--claude-orange);
+  color: #ffffff;
+  border: none;
+  font-family: var(--font-claude);
+  font-size: 18px;
+  font-weight: 600;
+  padding: 16px 36px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(208, 111, 89, 0.28);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-select-files:hover {
+  background: var(--claude-orange-hover);
+  transform: translateY(-2px);
+}
+
+.btn-sample-test {
+  margin-top: 14px;
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sample-test:hover {
+  background: var(--claude-orange-soft);
+  border-color: var(--claude-orange);
+  color: var(--claude-orange);
+}
+
+.selected-files-list {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.file-pill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.ws-sidebar {
+  border-left: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ws-sidebar h3 {
+  font-family: var(--font-claude);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 16px;
+}
+
+.opt-group {
+  margin-bottom: 16px;
+}
+
+.opt-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.opt-input,
+.opt-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  font-family: var(--font-claude);
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--bg-card);
+}
+
+.opt-input:focus,
+.opt-select:focus {
+  outline: none;
+  border-color: var(--claude-orange);
+}
+
+.orientation-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.orient-btn {
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 12px 8px;
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+}
+
+.orient-btn.active {
+  border-color: var(--claude-orange);
+  background: var(--claude-orange-soft);
+  color: var(--claude-orange);
+}
+
+.btn-execute-tool {
+  width: 100%;
+  background: var(--claude-orange);
+  color: #ffffff;
+  border: none;
+  font-family: var(--font-claude);
+  font-size: 17px;
+  font-weight: 600;
+  padding: 16px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(208, 111, 89, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.btn-execute-tool:hover {
+  background: var(--claude-orange-hover);
+  transform: translateY(-1px);
+}
+
+/* SONUÇ KARTI */
+.result-card {
+  margin-top: 22px;
+  width: 100%;
+  max-width: 620px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--claude-orange);
+  border-radius: 14px;
+  padding: 18px 20px;
+  text-align: left;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-res-primary {
+  background: var(--claude-orange);
+  color: #ffffff;
+  text-decoration: none;
+  font-family: var(--font-claude);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-res-primary:hover {
+  background: var(--claude-orange-hover);
+}
+
+.btn-res-secondary {
+  background: var(--bg-page);
+  color: var(--text-main);
+  text-decoration: none;
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+}
+
+.btn-res-secondary:hover {
+  border-color: var(--claude-orange);
+  color: var(--claude-orange);
+}
+
+/* APPLE APP STORE VİTRİNİ & CANLI iPHONE UYGULAMASI (Claude Arka Plan & Turuncu Tema) */
+.appstore-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.appstore-cards-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1320px) {
+  .appstore-cards-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .appstore-cards-strip {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.as-poster {
+  border-radius: 24px;
+  padding: 22px 16px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 495px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.as-poster:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Kırmızı yerine Claude Krem (#FAF9F5) ve Claude Turuncusu (#D06F59) Posterler */
+.as-poster-light {
+  background: linear-gradient(165deg, #FAF9F5 0%, #F3EFE4 62%, #D06F59 100%);
+}
+
+.as-poster-plum {
+  background: linear-gradient(165deg, #FAF9F5 0%, #EDD8CF 50%, #C45F49 100%);
+}
+
+.as-poster-coral {
+  background: linear-gradient(165deg, #D06F59 0%, #C25E48 58%, #9E4330 100%);
+  color: #FAF9F5;
+}
+
+.as-phone-frame {
+  background: var(--bg-page);
+  border: 5px solid #E6E4DC;
+  border-bottom: none;
+  border-radius: 26px 26px 0 0;
+  padding: 12px 11px 16px;
+  margin-top: 14px;
+  box-shadow: 0 -8px 28px rgba(20, 20, 19, 0.14);
+  color: var(--text-main);
+}
+
+/* ETKİLEŞİMLİ iOS SİMÜLATÖRÜ (App içi Claude Krem #FAF9F5 Arka Plan) */
+.ios-simulator-section {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 920px) {
+  .ios-simulator-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.iphone-device {
+  width: 375px;
+  height: 720px;
+  margin: 0 auto;
+  background: var(--bg-page);
+  border: 10px solid var(--claude-dark);
+  border-radius: 44px;
+  box-shadow: 0 20px 50px rgba(20, 20, 19, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.iphone-notch {
+  width: 110px;
+  height: 22px;
+  background: var(--claude-dark);
+  border-radius: 999px;
+  margin: 8px auto 4px;
+}
+
+.iphone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 10px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.iphone-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  background: var(--bg-page);
+}
+
+.iphone-tabbar {
+  height: 62px;
+  background: var(--bg-page);
+  border-top: 1px solid var(--border-light);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.iphone-tab-btn {
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-claude);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.iphone-tab-btn.active {
+  color: var(--claude-orange);
+}
+
+.ios-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ios-mini-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  padding: 12px 6px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(20, 20, 19, 0.03);
+  transition: all 0.15s ease;
+}
+
+.ios-mini-card:hover {
+  transform: scale(1.04);
+  border-color: var(--claude-orange);
+  background: var(--claude-orange-soft);
+}
+
+.ios-mini-card span {
+  display: block;
+  font-family: var(--font-claude);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-top: 6px;
+  line-height: 1.25;
+}
+
+/* MODAL VE BİLDİRİM */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 19, 0.42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-card {
+  background: var(--bg-page);
+  border-radius: 18px;
+  width: min(680px, 94vw);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-body {
+  padding: 20px 22px;
+  max-height: 68vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 14px 22px;
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 300;
+}
+
+.toast {
+  background: var(--claude-dark);
+  color: #FAF9F5;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-family: var(--font-claude);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  border-left: 4px solid var(--claude-orange);
+}
