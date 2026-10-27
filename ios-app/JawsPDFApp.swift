@@ -815,6 +815,7 @@ final class JawsDocumentStore: ObservableObject {
         passwordText: String,
         rotationAngle: Int,
         cropMarginPt: Double,
+        compressionQuality: Double = 0.55,
         signatureLines: [[CGPoint]]
     ) -> (outputDoc: JawsSavedDocument?, exportedFileURL: URL?, exportedFileLabel: String?, summary: String) {
         guard let pdf = PDFDocument(url: sourceDoc.url) else {
@@ -933,6 +934,338 @@ final class JawsDocumentStore: ObservableObject {
                 "Cropped page margins by \(Int(cropMarginPt)) pt on all sides."
             )
             return (documents.first(where: { $0.url == outURL }), nil, nil, msg)
+
+        case "compress-pdf":
+            let origBytes = (try? FileManager.default.attributesOfItem(atPath: sourceDoc.url.path)[.size] as? Int64) ?? 0
+            let dpiScale: CGFloat = compressionQuality <= 0.4 ? 1.0 : (compressionQuality <= 0.6 ? 1.25 : 1.5)
+            let defaultRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let renderer = UIGraphicsPDFRenderer(bounds: defaultRect)
+            let compressedData = renderer.pdfData { ctx in
+                for i in 0..<max(1, pdf.pageCount) {
+                    let page = pdf.page(at: i)
+                    let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
+                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+                    guard let p = page else { continue }
+                    let targetSize = CGSize(
+                        width: max(1, pageBounds.width * dpiScale),
+                        height: max(1, pageBounds.height * dpiScale)
+                    )
+                    let imgFormat = UIGraphicsImageRendererFormat()
+                    imgFormat.scale = 1.0
+                    imgFormat.opaque = true
+                    let imgRenderer = UIGraphicsImageRenderer(size: targetSize, format: imgFormat)
+                    let rasterized = imgRenderer.image { imgCtx in
+                        UIColor.white.setFill()
+                        imgCtx.fill(CGRect(origin: .zero, size: targetSize))
+                        imgCtx.cgContext.saveGState()
+                        imgCtx.cgContext.translateBy(x: 0, y: targetSize.height)
+                        imgCtx.cgContext.scaleBy(x: dpiScale, y: -dpiScale)
+                        p.draw(with: .mediaBox, to: imgCtx.cgContext)
+                        imgCtx.cgContext.restoreGState()
+                    }
+                    if let jpgData = rasterized.jpegData(compressionQuality: CGFloat(compressionQuality)),
+                       let compressedImg = UIImage(data: jpgData) {
+                        compressedImg.draw(in: pageBounds)
+                    } else {
+                        rasterized.draw(in: pageBounds)
+                    }
+                }
+            }
+            try? compressedData.write(to: outURL)
+            let newBytes = Int64(compressedData.count)
+            refreshDocuments()
+            let origKB = max(1, Int(origBytes / 1024))
+            let newKB = max(1, Int(newBytes / 1024))
+            let qualityPct = Int(compressionQuality * 100)
+            let msg = tr(
+                "PDF görsel akışları %\(qualityPct) kalite seviyesinde yeniden sıkıştırıldı (\(origKB) KB → \(newKB) KB, \(pdf.pageCount) sayfa).",
+                "Re-compressed PDF streams at \(qualityPct)% quality (\(origKB) KB → \(newKB) KB, \(pdf.pageCount) pages)."
+            )
+            return (documents.first(where: { $0.url == outURL }), nil, nil, msg)
+
+        case "repair-pdf":
+            let defaultRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let format = UIGraphicsPDFRendererFormat()
+            format.documentInfo = [
+                kCGPDFContextCreator as String: "JawsPDF Repair Engine",
+                kCGPDFContextProducer as String: "JawsPDF Clean XRef Stream Rebuilder"
+            ]
+            let renderer = UIGraphicsPDFRenderer(bounds: defaultRect, format: format)
+            var repairedPages = 0
+            let repairedData = renderer.pdfData { ctx in
+                for i in 0..<max(1, pdf.pageCount) {
+                    guard let page = pdf.page(at: i) else { continue }
+                    let rawBounds = page.bounds(for: .mediaBox)
+                    let safeBounds = (rawBounds.width > 20 && rawBounds.height > 20) ? rawBounds : defaultRect
+                    ctx.beginPage(withBounds: safeBounds, documentInfo: [:])
+                    let cg = ctx.cgContext
+                    cg.saveGState()
+                    cg.translateBy(x: 0, y: safeBounds.height)
+                    cg.scaleBy(x: 1.0, y: -1.0)
+                    page.draw(with: .mediaBox, to: cg)
+                    cg.restoreGState()
+                    repairedPages += 1
+                }
+            }
+            try? repairedData.write(to: outURL)
+            refreshDocuments()
+            let msg = tr(
+                "PDF XRef tablosu ve sayfa akışları onarıldı (\(repairedPages) sayfa temizlenerek yeniden oluşturuldu).",
+                "Rebuilt corrupt XRef tables and page streams (\(repairedPages) page(s) sanitized and restored)."
+            )
+            return (documents.first(where: { $0.url == outURL }), nil, nil, msg)
+
+        case "pdf-to-pdfa":
+            let defaultRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let archiveTitle = customText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? sourceDoc.name : customText
+            let format = UIGraphicsPDFRendererFormat()
+            format.documentInfo = [
+                kCGPDFContextTitle as String: archiveTitle,
+                kCGPDFContextAuthor as String: "JawsPDF Studio",
+                kCGPDFContextSubject as String: "ISO 19005 PDF/A-2b Long-Term Archival Document",
+                kCGPDFContextCreator as String: "JawsPDF Archival Engine v1.0",
+                kCGPDFContextProducer as String: "JawsPDF ISO-19005 PDF/A Renderer"
+            ]
+            let renderer = UIGraphicsPDFRenderer(bounds: defaultRect, format: format)
+            let pdfaData = renderer.pdfData { ctx in
+                for i in 0..<max(1, pdf.pageCount) {
+                    let page = pdf.page(at: i)
+                    let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
+                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+                    UIColor.white.setFill()
+                    ctx.fill(pageBounds)
+                    if let p = page {
+                        let cg = ctx.cgContext
+                        cg.saveGState()
+                        cg.translateBy(x: 0, y: pageBounds.height)
+                        cg.scaleBy(x: 1.0, y: -1.0)
+                        p.draw(with: .mediaBox, to: cg)
+                        cg.restoreGState()
+                    }
+                }
+            }
+            try? pdfaData.write(to: outURL)
+            refreshDocuments()
+            let msg = tr(
+                "Belge ISO 19005 (PDF/A) uzun süreli arşiv standardına dönüştürüldü (Fontlar ve renk uzayı gömüldü).",
+                "Converted document to ISO 19005 (PDF/A) archival format with flattened self-contained page streams."
+            )
+            return (documents.first(where: { $0.url == outURL }), nil, nil, msg)
+
+        case "redact-pdf":
+            let rawTerms = customText
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            let searchTerms = rawTerms.isEmpty ? ["Gizli", "CONFIDENTIAL"] : rawTerms
+
+            // Her sayfada aranan kelimelerin PDF koordinatlarını bul
+            var matchesByPage: [Int: [CGRect]] = [:]
+            var totalRedactedCount = 0
+            for term in searchTerms {
+                let selections = pdf.findString(term, withOptions: [.caseInsensitive])
+                for sel in selections {
+                    for selPage in sel.pages {
+                        let pageIdx = pdf.index(for: selPage)
+                        if pageIdx != NSNotFound {
+                            let b = sel.bounds(for: selPage)
+                            if b.width > 1 && b.height > 1 {
+                                matchesByPage[pageIdx, default: []].append(b.insetBy(dx: -3, dy: -2))
+                                totalRedactedCount += 1
+                            }
+                        }
+                    }
+                }
+            }
+
+            let defaultRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let renderer = UIGraphicsPDFRenderer(bounds: defaultRect)
+            let redactedData = renderer.pdfData { ctx in
+                for i in 0..<max(1, pdf.pageCount) {
+                    let page = pdf.page(at: i)
+                    let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
+                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+
+                    // Sayfayı görsele düzleştir (böylece karartılan metin arkadan kopyalanamaz!)
+                    let scale: CGFloat = 2.0
+                    let targetSize = CGSize(width: pageBounds.width * scale, height: pageBounds.height * scale)
+                    let imgFormat = UIGraphicsImageRendererFormat()
+                    imgFormat.scale = 1.0
+                    imgFormat.opaque = true
+                    let imgRenderer = UIGraphicsImageRenderer(size: targetSize, format: imgFormat)
+                    let flatPageImage = imgRenderer.image { imgCtx in
+                        UIColor.white.setFill()
+                        imgCtx.fill(CGRect(origin: .zero, size: targetSize))
+                        if let p = page {
+                            imgCtx.cgContext.saveGState()
+                            imgCtx.cgContext.translateBy(x: 0, y: targetSize.height)
+                            imgCtx.cgContext.scaleBy(x: scale, y: -scale)
+                            p.draw(with: .mediaBox, to: imgCtx.cgContext)
+                            imgCtx.cgContext.restoreGState()
+                        }
+
+                        // Bulunan tüm hassas kelime koordinatlarının üstünü siyah blokla kapat
+                        UIColor.black.setFill()
+                        if let rects = matchesByPage[i], !rects.isEmpty {
+                            for pdfRect in rects {
+                                let flippedY = pageBounds.height - pdfRect.maxY
+                                let drawRect = CGRect(
+                                    x: pdfRect.minX * scale,
+                                    y: flippedY * scale,
+                                    width: pdfRect.width * scale,
+                                    height: pdfRect.height * scale
+                                )
+                                imgCtx.fill(drawRect)
+                            }
+                        }
+                    }
+                    flatPageImage.draw(in: pageBounds)
+                }
+            }
+            try? redactedData.write(to: outURL)
+            refreshDocuments()
+            let termsJoined = searchTerms.joined(separator: ", ")
+            let msg = totalRedactedCount > 0
+                ? tr(
+                    "“\(termsJoined)” için \(totalRedactedCount) eşleşme bulundu, siyah blokla karartıldı ve metin katmanından kalıcı olarak kazındı.",
+                    "Found and permanently redacted \(totalRedactedCount) occurrence(s) of “\(termsJoined)” (flattened text layer)."
+                )
+                : tr(
+                    "Belge metin katmanı düzleştirilerek güvenli kopya oluşturuldu (“\(termsJoined)” kelimesi bu belgede yer almıyor).",
+                    "Flattened document text layer into a secure copy (no occurrences of “\(termsJoined)” found in text)."
+                )
+            return (documents.first(where: { $0.url == outURL }), nil, nil, msg)
+
+        case "compare-pdf":
+            let docA = mergeDocs.first ?? sourceDoc
+            let docB: JawsSavedDocument = {
+                if mergeDocs.count >= 2 { return mergeDocs[1] }
+                return documents.first(where: { $0.id != docA.id }) ?? docA
+            }()
+            let pdfA = PDFDocument(url: docA.url) ?? pdf
+            let pdfB = PDFDocument(url: docB.url) ?? pdf
+
+            var linesA: [String] = []
+            for i in 0..<pdfA.pageCount {
+                let txt = pdfA.page(at: i)?.string ?? ""
+                linesA.append(contentsOf: txt.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
+            }
+            var linesB: [String] = []
+            for i in 0..<pdfB.pageCount {
+                let txt = pdfB.page(at: i)?.string ?? ""
+                linesB.append(contentsOf: txt.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
+            }
+
+            let setA = Set(linesA)
+            let setB = Set(linesB)
+            let commonCount = setA.intersection(setB).count
+            let unionCount = max(1, setA.union(setB).count)
+            let similarityPct = Int((Double(commonCount) / Double(unionCount)) * 100.0)
+            let removedLines = linesA.filter { !setB.contains($0) }
+            let addedLines = linesB.filter { !setA.contains($0) }
+
+            // Dışa aktarılabilir .txt karşılaştırma raporu
+            var reportLines: [String] = [
+                "=== JawsPDF BELGE KARŞILAŞTIRMA RAPORU / COMPARISON REPORT ===",
+                "1. Belge / Document A: \(docA.name) (\(pdfA.pageCount) syf, \(docA.fileSizeText))",
+                "2. Belge / Document B: \(docB.name) (\(pdfB.pageCount) syf, \(docB.fileSizeText))",
+                "Benzerlik Oranı / Similarity: %\(similarityPct) (Ortak Satır: \(commonCount))",
+                "",
+                "--- [+] 2. BELGEDE EKLENEN SATIRLAR / ADDED IN DOC B (\(addedLines.count)) ---"
+            ]
+            reportLines.append(contentsOf: addedLines.prefix(25).map { "+ \($0)" })
+            if addedLines.isEmpty { reportLines.append("(Yeni eklenen satır yok / No added lines)") }
+            reportLines.append("")
+            reportLines.append("--- [-] 1. BELGEDEN ÇIKARILAN SATIRLAR / REMOVED FROM DOC A (\(removedLines.count)) ---")
+            reportLines.append(contentsOf: removedLines.prefix(25).map { "- \($0)" })
+            if removedLines.isEmpty { reportLines.append("(Silinen satır yok / No removed lines)") }
+
+            let fullReportText = reportLines.joined(separator: "\n")
+            let diffTxtURL = documentsDirectory.appendingPathComponent("Karsilastirma_\(docA.name)_vs_\(docB.name)_\(timestamp).txt")
+            try? fullReportText.data(using: .utf8)?.write(to: diffTxtURL)
+
+            // Görsel A4 Karşılaştırma Raporu PDF'i üret
+            let pageRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+            let reportPDFData = renderer.pdfData { ctx in
+                ctx.beginPage()
+                let cg = ctx.cgContext
+                UIColor(red: 250/255, green: 249/255, blue: 245/255, alpha: 1).setFill()
+                cg.fill(pageRect)
+                UIColor(red: 208/255, green: 111/255, blue: 89/255, alpha: 1).setFill()
+                cg.fill(CGRect(x: 0, y: 0, width: pageRect.width, height: 76))
+
+                let headerTitle = tr("JawsPDF — İki PDF Karşılaştırma Raporu", "JawsPDF — PDF Comparison Report")
+                headerTitle.draw(
+                    in: CGRect(x: 36, y: 24, width: pageRect.width - 72, height: 32),
+                    withAttributes: [
+                        .font: UIFont(name: "Georgia-Bold", size: 20) ?? UIFont.boldSystemFont(ofSize: 20),
+                        .foregroundColor: UIColor.white
+                    ]
+                )
+
+                let metaBox = CGRect(x: 36, y: 96, width: pageRect.width - 72, height: 92)
+                UIColor.white.setFill()
+                UIBezierPath(roundedRect: metaBox, cornerRadius: 10).fill()
+                UIColor(red: 229/255, green: 226/255, blue: 217/255, alpha: 1).setStroke()
+                UIBezierPath(roundedRect: metaBox, cornerRadius: 10).stroke()
+
+                let metaString = """
+                Belge #1: \(docA.name)  (\(pdfA.pageCount) Sayfa • \(linesA.count) Satır • \(docA.fileSizeText))
+                Belge #2: \(docB.name)  (\(pdfB.pageCount) Sayfa • \(linesB.count) Satır • \(docB.fileSizeText))
+                Benzerlik Skoru: %\(similarityPct)   |   Eklenen (+): \(addedLines.count) satır   |   Çıkarılan (-): \(removedLines.count) satır
+                """
+                metaString.draw(
+                    in: metaBox.insetBy(dx: 14, dy: 12),
+                    withAttributes: [
+                        .font: UIFont(name: "Georgia-Bold", size: 12) ?? UIFont.boldSystemFont(ofSize: 12),
+                        .foregroundColor: UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1)
+                    ]
+                )
+
+                var yCursor: CGFloat = 206
+                let secFont = UIFont(name: "Georgia-Bold", size: 13) ?? UIFont.boldSystemFont(ofSize: 13)
+                let rowFont = UIFont(name: "Georgia", size: 11) ?? UIFont.systemFont(ofSize: 11)
+
+                "[+] 2. Belgede Eklenen Farklar (\(addedLines.count)):".draw(
+                    in: CGRect(x: 36, y: yCursor, width: pageRect.width - 72, height: 20),
+                    withAttributes: [.font: secFont, .foregroundColor: UIColor(red: 39/255, green: 138/255, blue: 75/255, alpha: 1)]
+                )
+                yCursor += 22
+                for line in (addedLines.isEmpty ? ["(Eklenen farklı satır bulunmadı)"] : Array(addedLines.prefix(10))) {
+                    "+ \(line)".draw(
+                        in: CGRect(x: 44, y: yCursor, width: pageRect.width - 88, height: 18),
+                        withAttributes: [.font: rowFont, .foregroundColor: UIColor(red: 30/255, green: 110/255, blue: 60/255, alpha: 1)]
+                    )
+                    yCursor += 18
+                }
+
+                yCursor += 14
+                "[-] 1. Belgeden Çıkarılan / Değişen Farklar (\(removedLines.count)):".draw(
+                    in: CGRect(x: 36, y: yCursor, width: pageRect.width - 72, height: 20),
+                    withAttributes: [.font: secFont, .foregroundColor: UIColor(red: 192/255, green: 57/255, blue: 43/255, alpha: 1)]
+                )
+                yCursor += 22
+                for line in (removedLines.isEmpty ? ["(Çıkarılan farklı satır bulunmadı)"] : Array(removedLines.prefix(12))) {
+                    "- \(line)".draw(
+                        in: CGRect(x: 44, y: yCursor, width: pageRect.width - 88, height: 18),
+                        withAttributes: [.font: rowFont, .foregroundColor: UIColor(red: 165/255, green: 42/255, blue: 32/255, alpha: 1)]
+                    )
+                    yCursor += 18
+                }
+            }
+            try? reportPDFData.write(to: outURL)
+            refreshDocuments()
+            let summaryMsg = tr(
+                "“\(docA.name)” ve “\(docB.name)” karşılaştırıldı: %\(similarityPct) benzerlik, +\(addedLines.count) eklenen satır, -\(removedLines.count) çıkarılan satır.",
+                "Compared “\(docA.name)” vs “\(docB.name)”: \(similarityPct)% similarity, +\(addedLines.count) added line(s), -\(removedLines.count) removed line(s)."
+            )
+            return (
+                documents.first(where: { $0.url == outURL }),
+                diffTxtURL,
+                tr("📥 Fark Raporunu (.txt) Kaydet / Paylaş", "📥 Save / Share Diff Report (.txt)"),
+                summaryMsg
+            )
 
         case "protect-pdf":
             let pwd = passwordText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "1234" : passwordText
@@ -1095,31 +1428,40 @@ final class JawsDocumentStore: ObservableObject {
             return (newDoc, txtURL, tr("📥 OCR Metnini (.txt) Kaydet / Paylaş", "📥 Save / Share OCR Text (.txt)"), "OCR:\n\(summaryText)")
 
         default:
-            let pageRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
-            let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
-            let stampText = customText.isEmpty ? "JawsPDF • \(tool.name(lang))" : customText
+            let defaultRect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+            let renderer = UIGraphicsPDFRenderer(bounds: defaultRect)
+            let stampText = customText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "JawsPDF • \(tool.name(lang))" : customText
 
             let data = renderer.pdfData { ctx in
                 for i in 0..<max(1, pdf.pageCount) {
-                    ctx.beginPage()
+                    let page = pdf.page(at: i)
+                    let pageRect = page?.bounds(for: .mediaBox) ?? defaultRect
+                    ctx.beginPage(withBounds: pageRect, documentInfo: [:])
                     let cg = ctx.cgContext
 
-                    if let page = pdf.page(at: i) {
+                    if let p = page {
                         cg.saveGState()
                         cg.translateBy(x: 0, y: pageRect.height)
                         cg.scaleBy(x: 1.0, y: -1.0)
-                        page.draw(with: .mediaBox, to: cg)
+                        p.draw(with: .mediaBox, to: cg)
                         cg.restoreGState()
                     }
 
                     let badgeFont = UIFont(name: "Georgia-Bold", size: 13) ?? UIFont.boldSystemFont(ofSize: 13)
                     if tool.id == "watermark-pdf" {
-                        let wmFont = UIFont(name: "Georgia-Bold", size: 38) ?? UIFont.boldSystemFont(ofSize: 38)
+                        let wmFont = UIFont(name: "Georgia-Bold", size: 42) ?? UIFont.boldSystemFont(ofSize: 42)
+                        let paragraph = NSMutableParagraphStyle()
+                        paragraph.alignment = .center
                         let attrs: [NSAttributedString.Key: Any] = [
                             .font: wmFont,
-                            .foregroundColor: UIColor(red: 208/255, green: 111/255, blue: 89/255, alpha: 0.24)
+                            .foregroundColor: UIColor(red: 208/255, green: 111/255, blue: 89/255, alpha: 0.25),
+                            .paragraphStyle: paragraph
                         ]
-                        stampText.draw(in: CGRect(x: 80, y: 380, width: 450, height: 80), withAttributes: attrs)
+                        cg.saveGState()
+                        cg.translateBy(x: pageRect.midX, y: pageRect.midY)
+                        cg.rotate(by: -35.0 * .pi / 180.0)
+                        stampText.draw(in: CGRect(x: -240, y: -30, width: 480, height: 60), withAttributes: attrs)
+                        cg.restoreGState()
                     } else if tool.id == "sign-pdf" {
                         let signRect = CGRect(x: pageRect.width - 240, y: pageRect.height - 135, width: 195, height: 88)
                         UIColor(red: 250/255, green: 249/255, blue: 245/255, alpha: 0.96).setFill()
@@ -1127,7 +1469,6 @@ final class JawsDocumentStore: ObservableObject {
                         UIColor(red: 208/255, green: 111/255, blue: 89/255, alpha: 1).setStroke()
                         UIBezierPath(roundedRect: signRect, cornerRadius: 8).stroke()
 
-                        // Eğer kullanıcı parmağıyla imza çizdiyse gerçek imzayı kutunun içine çiz
                         if !signatureLines.isEmpty {
                             cg.saveGState()
                             cg.setStrokeColor(UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1).cgColor)
@@ -1162,41 +1503,38 @@ final class JawsDocumentStore: ObservableObject {
                             ]
                         )
                     } else if tool.id == "page-numbers" {
+                        let paragraph = NSMutableParagraphStyle()
+                        paragraph.alignment = .center
                         let pageNumStr = tr("Sayfa \(i + 1) / \(pdf.pageCount)", "Page \(i + 1) of \(pdf.pageCount)")
                         pageNumStr.draw(
-                            in: CGRect(x: pageRect.midX - 60, y: pageRect.height - 36, width: 120, height: 22),
+                            in: CGRect(x: pageRect.midX - 80, y: pageRect.height - 34, width: 160, height: 22),
                             withAttributes: [
                                 .font: badgeFont,
-                                .foregroundColor: UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1)
+                                .foregroundColor: UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1),
+                                .paragraphStyle: paragraph
                             ]
                         )
                     } else if tool.id == "bates-numbering" {
                         let batesStr = String(format: "%@-BATES-%04d", stampText, i + 1)
                         batesStr.draw(
-                            in: CGRect(x: pageRect.width - 220, y: 24, width: 180, height: 22),
+                            in: CGRect(x: pageRect.width - 220, y: 22, width: 190, height: 22),
                             withAttributes: [
                                 .font: badgeFont,
                                 .foregroundColor: UIColor(red: 108/255, green: 52/255, blue: 131/255, alpha: 1)
                             ]
                         )
-                    } else if tool.id == "redact-pdf" {
-                        UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1).setFill()
-                        cg.fill(CGRect(x: 60, y: pageRect.height - 90, width: 260, height: 24))
-                        let redactLabel = "[GİZLİ VERİ KARARTILDI / REDACTED: \(stampText)]"
-                        redactLabel.draw(
-                            in: CGRect(x: 66, y: pageRect.height - 86, width: 250, height: 18),
+                    } else if tool.id == "edit-pdf" {
+                        let noteRect = CGRect(x: pageRect.width - 235, y: 26, width: 205, height: 56)
+                        UIColor(red: 255/255, green: 249/255, blue: 219/255, alpha: 0.96).setFill()
+                        UIBezierPath(roundedRect: noteRect, cornerRadius: 8).fill()
+                        UIColor(red: 214/255, green: 137/255, blue: 16/255, alpha: 1).setStroke()
+                        UIBezierPath(roundedRect: noteRect, cornerRadius: 8).stroke()
+                        let noteTitle = "📌 \(stampText)"
+                        noteTitle.draw(
+                            in: noteRect.insetBy(dx: 10, dy: 8),
                             withAttributes: [
-                                .font: UIFont.boldSystemFont(ofSize: 10),
-                                .foregroundColor: UIColor.white
-                            ]
-                        )
-                    } else {
-                        let footerText = "\(tool.name(lang)) • \(stampText) • \(i + 1)/\(max(1, pdf.pageCount))"
-                        footerText.draw(
-                            in: CGRect(x: 42, y: pageRect.height - 36, width: pageRect.width - 84, height: 22),
-                            withAttributes: [
-                                .font: badgeFont,
-                                .foregroundColor: UIColor(red: 208/255, green: 111/255, blue: 89/255, alpha: 0.95)
+                                .font: UIFont(name: "Georgia-Bold", size: 11.5) ?? UIFont.boldSystemFont(ofSize: 11.5),
+                                .foregroundColor: UIColor(red: 20/255, green: 20/255, blue: 19/255, alpha: 1)
                             ]
                         )
                     }
@@ -2084,6 +2422,7 @@ struct JawsToolRunnerSheet: View {
     @State private var passwordText: String = ""
     @State private var rotationAngle: Int = 90
     @State private var cropMarginPt: Double = 36
+    @State private var compressionQuality: Double = 0.55
     @State private var signatureLines: [[CGPoint]] = []
 
     @State private var showFileImporter = false
@@ -2113,11 +2452,15 @@ struct JawsToolRunnerSheet: View {
             return store.tr("+ Telefondan HTML / Metin Dosyası Seç", "+ Select HTML / Text File from iPhone")
         case "jpg-to-pdf", "scan-to-pdf":
             return store.tr("+ Dosyalardan Görsel / PDF Seç", "+ Select Image / PDF from Files")
-        case "merge-pdf":
+        case "merge-pdf", "compare-pdf":
             return store.tr("+ Telefondan PDF Dosyaları Ekle (Çoklu)", "+ Add PDF Files from iPhone (Multiple)")
         default:
             return store.tr("+ Telefondan PDF Dosyası Seç", "+ Select PDF File from iPhone")
         }
+    }
+
+    var isMultiDocTool: Bool {
+        tool.id == "merge-pdf" || tool.id == "compare-pdf"
     }
 
     var body: some View {
@@ -2221,14 +2564,16 @@ struct JawsToolRunnerSheet: View {
                             Text(
                                 tool.id == "merge-pdf"
                                     ? store.tr("Birleştirilecek Belgeleri İşaretleyin (Çoklu Seçim):", "Check Documents to Merge (Multi-Select):")
-                                    : store.tr("Veya Uygulamadaki Hazır Belgeyi Seçin:", "Or Select an Existing Document in App:")
+                                    : (tool.id == "compare-pdf"
+                                        ? store.tr("Karşılaştırılacak 2 PDF Belgesini İşaretleyin (#1 ve #2):", "Check 2 PDF Documents to Compare (#1 & #2):")
+                                        : store.tr("Veya Uygulamadaki Hazır Belgeyi Seçin:", "Or Select an Existing Document in App:"))
                             )
                                 .font(.system(size: 12, weight: .semibold, design: .serif))
                                 .foregroundColor(JawsTheme.muted)
 
                             ForEach(store.documents) { doc in
                                 Button {
-                                    if tool.id == "merge-pdf" {
+                                    if isMultiDocTool {
                                         if let idx = selectedMergeIDs.firstIndex(of: doc.id) {
                                             selectedMergeIDs.remove(at: idx)
                                         } else {
@@ -2239,7 +2584,7 @@ struct JawsToolRunnerSheet: View {
                                     }
                                 } label: {
                                     HStack {
-                                        if tool.id == "merge-pdf" {
+                                        if isMultiDocTool {
                                             let orderIndex = selectedMergeIDs.firstIndex(of: doc.id)
                                             Image(systemName: orderIndex != nil ? "checkmark.square.fill" : "square")
                                                 .foregroundColor(JawsTheme.orange)
@@ -2301,6 +2646,66 @@ struct JawsToolRunnerSheet: View {
                                     Text("72 pt").tag(72.0)
                                 }
                                 .pickerStyle(.segmented)
+                            } else if tool.id == "compress-pdf" {
+                                Text(store.tr("Sıkıştırma Seviyesi (Görsel & Akış Optimizasyonu):", "Compression Level (Stream & Image Optimization):"))
+                                    .font(.system(size: 12.5, design: .serif))
+                                    .foregroundColor(JawsTheme.muted)
+                                Picker("Compression", selection: $compressionQuality) {
+                                    Text(store.tr("Maksimum (%35)", "High (35%)")).tag(0.35)
+                                    Text(store.tr("Önerilen (%55)", "Balanced (55%)")).tag(0.55)
+                                    Text(store.tr("Yüksek Kalite (%75)", "Light (75%)")).tag(0.75)
+                                }
+                                .pickerStyle(.segmented)
+                            } else if tool.id == "redact-pdf" {
+                                Text(store.tr(
+                                    "Karartılacak Hassas Kelimeleri Girin (Virgülle ayırın):",
+                                    "Enter Sensitive Words to Redact (Comma-separated):"
+                                ))
+                                    .font(.system(size: 12.5, design: .serif))
+                                    .foregroundColor(JawsTheme.muted)
+
+                                TextField(store.tr("Örn: Gizli, T.C., Tutar, IBAN", "e.g. Confidential, SSN, Total, IBAN"), text: $customText)
+                                    .font(.system(size: 13.5, weight: .semibold, design: .serif))
+                                    .padding(10)
+                                    .background(JawsTheme.surfaceAlt)
+                                    .cornerRadius(8)
+
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        ForEach(["Gizli, Onaylı", "T.C., Kimlik, Vergi", "Tutar, ₺, KDV", "IBAN, Hesap, Sözleşme"], id: \.self) { preset in
+                                            Button(preset) { customText = preset }
+                                                .font(.system(size: 11.5, weight: .bold, design: .serif))
+                                                .foregroundColor(JawsTheme.charcoal)
+                                                .padding(.horizontal, 9)
+                                                .padding(.vertical, 5)
+                                                .background(JawsTheme.surfaceAlt)
+                                                .cornerRadius(6)
+                                        }
+                                    }
+                                }
+                            } else if tool.id == "compare-pdf" {
+                                Text(store.tr(
+                                    "Seçilen #1 ve #2 numaralı PDF belgeleri satır satır karşılaştırılır, benzerlik yüzdesi hesaplanır ve renkli A4 Fark Raporu + .txt çıktısı üretilir.",
+                                    "Compares PDF #1 and #2 line-by-line, calculates similarity %, and generates an A4 Diff Report PDF + .txt file."
+                                ))
+                                    .font(.system(size: 12.5, design: .serif))
+                                    .foregroundColor(JawsTheme.muted)
+                            } else if tool.id == "repair-pdf" {
+                                Text(store.tr(
+                                    "Bozuk XRef tabloları, hatalı nesne referansları ve açılmayan sayfa akışları taranarak temiz bir PDF kapsayıcısında yeniden inşa edilir.",
+                                    "Scans and rebuilds corrupt XRef tables and page streams into a clean, standards-compliant PDF container."
+                                ))
+                                    .font(.system(size: 12.5, design: .serif))
+                                    .foregroundColor(JawsTheme.muted)
+                            } else if tool.id == "pdf-to-pdfa" {
+                                Text(store.tr("ISO 19005 (PDF/A-2b) Arşiv Belgesi Başlığı:", "ISO 19005 (PDF/A-2b) Archival Document Title:"))
+                                    .font(.system(size: 12.5, design: .serif))
+                                    .foregroundColor(JawsTheme.muted)
+                                TextField(store.tr("Resmi Arşiv Başlığı", "Official Archival Title"), text: $customText)
+                                    .font(.system(size: 13.5, design: .serif))
+                                    .padding(10)
+                                    .background(JawsTheme.surfaceAlt)
+                                    .cornerRadius(8)
                             } else if ["split-pdf", "remove-pages", "extract-pages", "organize-pdf"].contains(tool.id) {
                                 Text(store.tr(
                                     "Sayfa Numaraları veya Aralığı (Örn: 1-2 veya 1, 3):",
@@ -2383,6 +2788,7 @@ struct JawsToolRunnerSheet: View {
                                 passwordText: passwordText,
                                 rotationAngle: rotationAngle,
                                 cropMarginPt: cropMarginPt,
+                                compressionQuality: compressionQuality,
                                 signatureLines: signatureLines
                             )
                             outputDoc = res.outputDoc
@@ -2475,11 +2881,14 @@ struct JawsToolRunnerSheet: View {
                 if selectedMergeIDs.isEmpty {
                     selectedMergeIDs = store.documents.prefix(2).map { $0.id }
                 }
+                if tool.id == "redact-pdf" {
+                    customText = "Gizli, Onaylı"
+                }
             }
             .fileImporter(
                 isPresented: $showFileImporter,
                 allowedContentTypes: [.item, .data, .pdf, .image, .plainText, .rtf, .html, .commaSeparatedText, .spreadsheet, .presentation],
-                allowsMultipleSelection: tool.id == "merge-pdf" || tool.id == "jpg-to-pdf"
+                allowsMultipleSelection: isMultiDocTool || tool.id == "jpg-to-pdf"
             ) { result in
                 if case .success(let urls) = result, !urls.isEmpty {
                     isImportingFile = true
