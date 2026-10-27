@@ -944,7 +944,7 @@ final class JawsDocumentStore: ObservableObject {
                 for i in 0..<max(1, pdf.pageCount) {
                     let page = pdf.page(at: i)
                     let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
-                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+                    ctx.beginPage(withBounds: pageBounds, pageInfo: [:])
                     guard let p = page else { continue }
                     let targetSize = CGSize(
                         width: max(1, pageBounds.width * dpiScale),
@@ -988,7 +988,7 @@ final class JawsDocumentStore: ObservableObject {
             let format = UIGraphicsPDFRendererFormat()
             format.documentInfo = [
                 kCGPDFContextCreator as String: "JawsPDF Repair Engine",
-                kCGPDFContextProducer as String: "JawsPDF Clean XRef Stream Rebuilder"
+                kCGPDFContextSubject as String: "JawsPDF Clean XRef Stream Rebuilder"
             ]
             let renderer = UIGraphicsPDFRenderer(bounds: defaultRect, format: format)
             var repairedPages = 0
@@ -997,7 +997,7 @@ final class JawsDocumentStore: ObservableObject {
                     guard let page = pdf.page(at: i) else { continue }
                     let rawBounds = page.bounds(for: .mediaBox)
                     let safeBounds = (rawBounds.width > 20 && rawBounds.height > 20) ? rawBounds : defaultRect
-                    ctx.beginPage(withBounds: safeBounds, documentInfo: [:])
+                    ctx.beginPage(withBounds: safeBounds, pageInfo: [:])
                     let cg = ctx.cgContext
                     cg.saveGState()
                     cg.translateBy(x: 0, y: safeBounds.height)
@@ -1023,15 +1023,14 @@ final class JawsDocumentStore: ObservableObject {
                 kCGPDFContextTitle as String: archiveTitle,
                 kCGPDFContextAuthor as String: "JawsPDF Studio",
                 kCGPDFContextSubject as String: "ISO 19005 PDF/A-2b Long-Term Archival Document",
-                kCGPDFContextCreator as String: "JawsPDF Archival Engine v1.0",
-                kCGPDFContextProducer as String: "JawsPDF ISO-19005 PDF/A Renderer"
+                kCGPDFContextCreator as String: "JawsPDF ISO-19005 PDF/A Archival Engine v1.0"
             ]
             let renderer = UIGraphicsPDFRenderer(bounds: defaultRect, format: format)
             let pdfaData = renderer.pdfData { ctx in
                 for i in 0..<max(1, pdf.pageCount) {
                     let page = pdf.page(at: i)
                     let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
-                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+                    ctx.beginPage(withBounds: pageBounds, pageInfo: [:])
                     UIColor.white.setFill()
                     ctx.fill(pageBounds)
                     if let p = page {
@@ -1084,7 +1083,7 @@ final class JawsDocumentStore: ObservableObject {
                 for i in 0..<max(1, pdf.pageCount) {
                     let page = pdf.page(at: i)
                     let pageBounds = page?.bounds(for: .mediaBox) ?? defaultRect
-                    ctx.beginPage(withBounds: pageBounds, documentInfo: [:])
+                    ctx.beginPage(withBounds: pageBounds, pageInfo: [:])
 
                     // Sayfayı görsele düzleştir (böylece karartılan metin arkadan kopyalanamaz!)
                     let scale: CGFloat = 2.0
@@ -1436,7 +1435,7 @@ final class JawsDocumentStore: ObservableObject {
                 for i in 0..<max(1, pdf.pageCount) {
                     let page = pdf.page(at: i)
                     let pageRect = page?.bounds(for: .mediaBox) ?? defaultRect
-                    ctx.beginPage(withBounds: pageRect, documentInfo: [:])
+                    ctx.beginPage(withBounds: pageRect, pageInfo: [:])
                     let cg = ctx.cgContext
 
                     if let p = page {
