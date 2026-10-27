@@ -1708,7 +1708,7 @@ struct JawsHomeTabView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         // Hero Kartı
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(store.tr("HALK İÇİN ÜCRETSİZ • %100 CİHAZ İÇİ", "FREE FOR EVERYONE • 100% ON-DEVICE"))
+                            Text(store.tr("Tamamen Ücretsiz • %100 Cihaz İçi", "Completely Free • 100% On-Device"))
                                 .font(.system(size: 11, weight: .bold, design: .serif))
                                 .tracking(1.1)
                                 .foregroundColor(JawsTheme.orange)
