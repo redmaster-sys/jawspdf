@@ -1,4 +1,4 @@
-name: JawsPDF iOS IPA Derleyici ve Canlı Simülatör Testi
+name: JawsPDF iOS IPA Derleyici ve App Store Connect Yükleyici
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test-ios:
-    name: Xcode ile JawsPDF.ipa Üret & iOS Simülatörde Test Et
+    name: Xcode ile JawsPDF.ipa Üret & App Store Connect'e Yükle
     runs-on: macos-15
     defaults:
       run:
@@ -29,24 +29,81 @@ jobs:
           brew install xcodegen
           xcodegen generate
 
-      - name: 1) Gerçek iOS Cihazlar İçin JawsPDF.ipa Derle (ARM64 Release)
+      - name: 1) Sideloadly / Doğrudan Kurulum İçin JawsPDF-v1.0.0.ipa Derle
         run: |
           xcodebuild clean archive \
             -project JawsPDF.xcodeproj \
             -scheme JawsPDF \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath $RUNNER_TEMP/JawsPDF.xcarchive \
+            -archivePath $RUNNER_TEMP/JawsPDF_Unsigned.xcarchive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
           mkdir -p $RUNNER_TEMP/Payload
-          cp -R $RUNNER_TEMP/JawsPDF.xcarchive/Products/Applications/JawsPDF.app $RUNNER_TEMP/Payload/
+          cp -R $RUNNER_TEMP/JawsPDF_Unsigned.xcarchive/Products/Applications/JawsPDF.app $RUNNER_TEMP/Payload/
           cd $RUNNER_TEMP
           zip -r9 JawsPDF-v1.0.0.ipa Payload
 
-      - name: 2) iOS Simülatör İçin Derle ve Canlı Ekran Görüntüsü Al
+      - name: 2) Resmi Apple Distribution Sertifikasıyla İmzala ve App Store Connect'e Yükle
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          DIST_CERT_P12_B64: ${{ secrets.DIST_CERT_P12_B64 }}
+          DIST_PROFILE_B64: ${{ secrets.DIST_PROFILE_B64 }}
+        run: |
+          if [ -n "$DIST_CERT_P12_B64" ] && [ -n "$DIST_PROFILE_B64" ]; then
+            echo "Setting up Keychain and Provisioning Profile for App Store Connect..."
+            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+            KEYCHAIN_PASS="jawspdf_keychain_pass"
+
+            security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+
+            echo "$DIST_CERT_P12_B64" | base64 --decode > $RUNNER_TEMP/dist_cert.p12
+            security import $RUNNER_TEMP/dist_cert.p12 -P "jawspdf123" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+            security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            echo "$DIST_PROFILE_B64" | base64 --decode > $RUNNER_TEMP/JawsPDF_AppStore.mobileprovision
+            PROF_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $RUNNER_TEMP/JawsPDF_AppStore.mobileprovision))
+            cp $RUNNER_TEMP/JawsPDF_AppStore.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$PROF_UUID.mobileprovision
+            echo "Installed Provisioning Profile UUID: $PROF_UUID"
+
+            xcodebuild clean archive \
+              -project JawsPDF.xcodeproj \
+              -scheme JawsPDF \
+              -configuration Release \
+              -sdk iphoneos \
+              -archivePath $RUNNER_TEMP/JawsPDF_Signed.xcarchive \
+              DEVELOPMENT_TEAM=3QW94VHL9G \
+              CODE_SIGN_STYLE=Manual \
+              CODE_SIGN_IDENTITY="Apple Distribution" \
+              PROVISIONING_PROFILE_SPECIFIER="$PROF_UUID"
+
+            xcodebuild -exportArchive \
+              -archivePath $RUNNER_TEMP/JawsPDF_Signed.xcarchive \
+              -exportOptionsPlist ExportOptions.plist \
+              -exportPath $RUNNER_TEMP/AppStoreExport
+
+            mkdir -p ~/.appstoreconnect/private_keys
+            echo "$ASC_PRIVATE_KEY_B64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+            IPA_FILE=$(find $RUNNER_TEMP/AppStoreExport -name "*.ipa" | head -n 1)
+            echo "Uploading $IPA_FILE to App Store Connect..."
+            xcrun altool --upload-app \
+              --type ios \
+              -f "$IPA_FILE" \
+              --apiKey "$ASC_KEY_ID" \
+              --apiIssuer "$ASC_ISSUER_ID" \
+              --verbose
+          fi
+
+      - name: 3) iOS Simülatör İçin Derle ve Canlı Ekran Görüntüsü Al
         run: |
           xcodebuild build \
             -project JawsPDF.xcodeproj \
@@ -64,7 +121,7 @@ jobs:
             xcrun simctl bootstatus "$SIM_UDID" -b
             APP_PATH=$(find $RUNNER_TEMP/SimBuild -name "JawsPDF.app" | head -n 1)
             xcrun simctl install "$SIM_UDID" "$APP_PATH"
-            xcrun simctl launch "$SIM_UDID" com.jawspdf.studio
+            xcrun simctl launch "$SIM_UDID" com.jawspdf.studio.3QW94VHL9G || true
             sleep 5
             xcrun simctl io "$SIM_UDID" screenshot "$RUNNER_TEMP/JawsPDF_iOS_Simulator_Canli_Gorunum.png"
           fi

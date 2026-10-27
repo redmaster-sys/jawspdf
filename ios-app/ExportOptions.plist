@@ -4,15 +4,20 @@
 <dict>
 	<key>method</key>
 	<string>app-store-connect</string>
-	<key>destination</key>
-	<string>export</string>
+	<key>teamID</key>
+	<string>3QW94VHL9G</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
-	<key>stripSwiftSymbols</key>
-	<true/>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.jawspdf.studio.3QW94VHL9G</key>
+		<string>JawsPDF AppStore Profile</string>
+	</dict>
 	<key>uploadSymbols</key>
 	<true/>
-	<key>manageAppVersionAndBuildNumber</key>
-	<true/>
+	<key>destination</key>
+	<string>export</string>
 </dict>
 </plist>
