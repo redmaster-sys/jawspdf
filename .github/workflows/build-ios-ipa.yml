@@ -16,6 +16,15 @@ jobs:
       - name: Repo Kodlarını Çek
         uses: actions/checkout@v4
 
+      - name: Xcode 26+ (iOS 26 SDK) Seç
+        run: |
+          ls -la /Applications | grep Xcode || true
+          LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          echo "Selecting Xcode: $LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks
+
       - name: WebBundle Kaynaklarını Hazırla
         run: |
           mkdir -p WebBundle/assets
